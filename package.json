@@ -5,6 +5,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "build:ui": "rm -rf build && cd ../../Learning-Javascript/part2/phonebook/ && npm run build && cp -r build ../../../Part3-Backend/limitless-reef-88519",
+    "deploy": "git push heroku main",
+    "deploy:full": "npm run build:ui && git add . && git commit -m 'new ui build' && npm run deploy",
+    "logs:prod": "heroku logs --tail",
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

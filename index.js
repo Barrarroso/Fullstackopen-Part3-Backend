@@ -4,6 +4,7 @@ const cors = require('cors')
 
 const app = express()
 
+app.use(express.static('build'))
 app.use(cors())
 //Json-parser, lets you use response.body
 app.use(express.json())
