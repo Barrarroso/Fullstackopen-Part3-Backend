@@ -1,6 +1,8 @@
+require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
+const Person = require('./models/person')
 
 const app = express()
 
@@ -47,18 +49,20 @@ app.get('/', (request, response) => {
 
 //Get all people
 app.get('/api/people', (request, response) => {
-    response.json(phonebookData)
+    Person.find({}).then(people => {
+        response.json(people)
+    })
 })
 
 //Get a single person
 app.get('/api/people/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const person = phonebookData.find((person) => person.id === id)
-    if (person) {
-        response.json(person)
-    }else{
-        response.status(404).end()
-    }
+    Person.findById(request.params.id).then(person => {
+        if (person) {
+            response.json(person)
+        } else {
+            response.status(404).end()
+        }    
+    })
 })
 
 //Delete a person
@@ -80,27 +84,15 @@ app.post('/api/people', (request, response) => {
         return response.status(400).json({
             error: 'Missing data'
         })
-
-    //Check that name doesn't already exist
-    }else if (phonebookData.map(person => person.name).includes(body.name)){
-        return response.status(409).json({
-            error: `User with name ${body.name} already exists`
-        })
     }
-    
-    
-    
-    const generateId = () => Math.floor(Math.random()*1000000)
-
     const newPerson = {
-        id: generateId(),
         name: body.name,
         number: body.number
     }
-
-    phonebookData = phonebookData.concat(newPerson)
-
-    response.json(newPerson)
+    newPerson.save().then( result => {
+        console.log(`Added ${body.name} number ${body.number} to phonebook`)
+        response.json(result)
+    })
 })
 
 app.get('/info', (request, response) => {
