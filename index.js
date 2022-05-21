@@ -85,10 +85,10 @@ app.post('/api/people', (request, response) => {
             error: 'Missing data'
         })
     }
-    const newPerson = {
+    newPerson = new Person({
         name: body.name,
         number: body.number
-    }
+    })
     newPerson.save().then( result => {
         console.log(`Added ${body.name} number ${body.number} to phonebook`)
         response.json(result)
