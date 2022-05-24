@@ -27,59 +27,11 @@ app.use(cors())
 //Log requests
 app.use(morgan(':method :url :status :res[content-length] - :type :response-time ms'))
 
-
-//Error handlers are the last loaded middlewares
-const unknownEndpoint = (request, response) => {
-    response.status(404).send({ error: 'unknown endpoint' })
-  }
-  
-// handler of requests with unknown endpoint
-app.use(unknownEndpoint)
-  
-const errorHandler = (error, request, response, next) => {
-    console.error(error.message)
-  
-    if (error.name === 'CastError') {
-      return response.status(400).send({ error: 'malformatted id' })
-    } 
-  
-    next(error)
-}
-
-// handler of requests with result to errors
-app.use(errorHandler)
-  
-
-
-
 morgan.token('type', (req, res) => { 
     if (req.body) {
         return JSON.stringify(req.body)
     }
 })
-
-let phonebookData = [
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
 
 app.get('/', (request, response) => {
     response.send('<h1>Hi</h1>')
@@ -94,24 +46,22 @@ app.get('/api/people', (request, response) => {
 })
 
 //Get a single person
-app.get('/api/people/:id', (request, response) => {
+app.get('/api/people/:id', (request, response, next) => {
     Person.findById(request.params.id).then(person => {
         if (person) {
             response.json(person)
         } else {
-            response.status(404).end()
+            return response.status(404).send({error: `person with id: ${request.params.id} couldn't be found`})
         }    
     })
     .catch(error => next(error))
 })
 
 //Delete a person
-app.delete('/api/people/:id', (request, response) => {
-    const id = Number(request.params.id)
-    console.log(phonebookData)
-    phonebookData = phonebookData.filter(person => person.id !== id)
-    console.log(phonebookData)
-    response.status(204).end()
+app.delete('/api/people/:id', (request, response, next) => {
+    Person.findByIdAndRemove(request.params.id).then( result => {
+        response.status(204).end()
+    }).catch(error => next(error))
 })
 
 //Add a person
@@ -135,20 +85,68 @@ app.post('/api/people', (request, response) => {
     })
 })
 
-app.get('/info', (request, response) => {
-    console.log(request)
+app.put('/api/people/:id', (request, response, next) => {
+    const body = request.body
+
+    if (!body.name || !body.number){
+        console.log(body)
+        return response.status(400).json({
+            error: 'Missing data'
+        })
+    }
+
+    // we can only update person's phone number
+    const person = {
+        number: body.number
+    }
+
+    Person.findByIdAndUpdate(request.params.id, person, {new: true})
+    .then(updatedPerson => {
+        response.json(updatedPerson)
+    })
+    .catch(error => next(error))
+})
+
+app.get('/info', (request, response, next) => {
+
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZoneName: 'long' };
-
     const date = new Date().toLocaleString('en-US', options)
-    const info = `<div>
-    <h2>Phonebook has info for ${phonebookData.length} people</h2>
-    <h3>${date}</h3>
-    </div>`
 
-    response.send(info)
+    Person.find({}).then(people => {
+    
+        const info = `<div>
+        <h2>Phonebook has info for ${people.length} people</h2>
+        <h3>${date}</h3>
+        </div>`
+
+        response.send(info)
+    })
+    .catch(error => next(error))
 })
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
+
+// handler of requests with unknown endpoint
+const unknownEndpoint = (request, response) => {
+    console.log("Unknown endpoint")
+    response.status(404).send({ error: 'unknown endpoint' })
+}
+  
+app.use(unknownEndpoint)
+
+//Error handlers are the last loaded middlewares
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+  
+    if (error.name === 'CastError') {
+        console.log("Malformatted id")
+      return response.status(400).send({ error: 'malformatted id' })
+    } 
+  
+    next(error)
+}
+
+app.use(errorHandler)
